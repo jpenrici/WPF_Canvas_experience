@@ -1,0 +1,44 @@
+﻿<Window x:Class="WPF_Canvas_experience.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:WPF_Canvas_experience"
+        mc:Ignorable="d"
+        Title="MainWindow" Height="400" Width="600">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <!-- Menu -->
+        <Menu x:Name="menuMain" Grid.Row="0">
+            <MenuItem x:Name="menuFile" Header="File">
+                <MenuItem x:Name="menuSave" Header="Save"/>
+                <MenuItem x:Name="menuExport" Header="Export"/>
+                <MenuItem x:Name="menuQuit" Header="Quit"/>
+            </MenuItem>
+            <MenuItem x:Name="menuEdit" Header="Edit">
+                <MenuItem x:Name="menuUndo" Header="Undo"/>
+                <MenuItem x:Name="menuRedo" Header="Redo"/>
+                <MenuItem x:Name="menuBackground" Header="Background"/>
+            </MenuItem>
+            <MenuItem x:Name="menuAdd" Header="Add"/>
+            <MenuItem x:Name="menuAbout" Header="About"/>
+        </Menu>
+        <!-- Drawing Area -->
+            <Canvas x:Name="drawingArea" Grid.Row="1"/>
+        <!-- Console -->
+        <StackPanel x:Name="stackInform" Grid.Row="2" Orientation="Vertical">
+            <Label x:Name="lblInform"/>
+            <StackPanel x:Name="stackConsole" Orientation="Horizontal">
+                <TextBox x:Name="txtboxConsole"/>
+                <StackPanel x:Name="stackConsoleButton" Orientation="Vertical">
+                    <Button x:Name="btnUndo" Content="Undo"/>
+                    <Button x:Name="btnRedo" Content="Redo"/>
+                </StackPanel>
+            </StackPanel>
+        </StackPanel>
+    </Grid>
+</Window>
