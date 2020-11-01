@@ -23,9 +23,7 @@ namespace WPF_Canvas_experience
     public partial class MainWindow : Window
     {
         #region Private Field
-        Point mouseXY;
-        double canvasLeft;
-        double canvasTop;
+        Point mousePosition;
         List<string> history;
         #endregion
 
@@ -61,14 +59,14 @@ namespace WPF_Canvas_experience
         }
 
         private void ConfigMenu()
-        { 
+        {
             menuSave.Click += new RoutedEventHandler(this.CommonClickHandlerFromMenu);
             menuExport.Click += new RoutedEventHandler(this.CommonClickHandlerFromMenu);
             menuQuit.Click += new RoutedEventHandler(this.CommonClickHandlerFromMenu);
             menuUndo.Click += new RoutedEventHandler(this.CommonClickHandlerFromMenu);
             menuRedo.Click += new RoutedEventHandler(this.CommonClickHandlerFromMenu);
             menuBackground.Click += new RoutedEventHandler(this.CommonClickHandlerFromMenu);
-            menuAbout.Click += new RoutedEventHandler(this.CommonClickHandlerFromMenu);            
+            menuAbout.Click += new RoutedEventHandler(this.CommonClickHandlerFromMenu);
 
             string[] figures = {
                 "Rectangle",
@@ -139,12 +137,12 @@ namespace WPF_Canvas_experience
         #region Open and Save Files
         private void SaveFile()
         {
-        	string txtOutput = "History\n";
-        	foreach (var line in history) 
-        	{
-        		txtOutput += line + "\n";
-        	}  	
-        	Export(txtOutput, "Text Files (*.txt; *.csv) | *.txt; *.csv");
+            string txtOutput = "History\n";
+            foreach (var line in history)
+            {
+                txtOutput += line + "\n";
+            }
+            Export(txtOutput, "Text Files (*.txt; *.csv) | *.txt; *.csv");
         }
 
         private void Export(object value, string filter)
@@ -154,17 +152,17 @@ namespace WPF_Canvas_experience
 
             Type t = value.GetType();
             if (!t.Equals(typeof(string)) && !t.Equals(typeof(BitmapImage)))
-        		return;
-      
-        	try 
-        	{
-        		SaveFileDialog saveDlg = new SaveFileDialog();
-        		saveDlg.RestoreDirectory = true;
-        		saveDlg.Filter = filter;
+                return;
+
+            try
+            {
+                SaveFileDialog saveDlg = new SaveFileDialog();
+                saveDlg.RestoreDirectory = true;
+                saveDlg.Filter = filter;
 
                 if (saveDlg.ShowDialog().Equals(true))
                 {
-                	FileStream fs = new FileStream(saveDlg.FileName, FileMode.Create);
+                    FileStream fs = new FileStream(saveDlg.FileName, FileMode.Create);
 
                     if (t.Equals(typeof(string)))
                     {
@@ -173,20 +171,22 @@ namespace WPF_Canvas_experience
                         writer.Close();
                     }
                 }
-                else 
+                else
                 {
-                	MessageBox.Show("Action canceled!");
-                }          	
-        	} catch (Exception ex)
-        	{
-        		MessageBox.Show("Erro: " + ex.Message, "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
-        	}
+                    MessageBox.Show("Action canceled!");
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Erro: " + ex.Message, "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
         private BitmapImage ImportImage()
         {
             BitmapImage bitmap = null;
-            try {
+            try
+            {
                 OpenFileDialog openDlg = new OpenFileDialog();
                 openDlg.Filter = "Image Files (*.jpg; *.jpeg; *.gif; *.bmp; *.png) | *.jpg; *.jpeg; *.gif; *.bmp; *.png";
 
@@ -194,11 +194,12 @@ namespace WPF_Canvas_experience
                 {
                     bitmap = new BitmapImage(new Uri(openDlg.FileName));
                 }
-            } catch (Exception ex)
+            }
+            catch (Exception ex)
             {
                 MessageBox.Show("Erro: " + ex.Message, "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
             }
-            return bitmap;            
+            return bitmap;
         }
 
         private void ExportImage()
@@ -217,11 +218,11 @@ namespace WPF_Canvas_experience
             switch (feSource.Name)
             {
                 case "menuSave":
-                	// Save Text
+                    // Save Text
                     SaveFile();
                     break;
                 case "menuExport":
-                	// Save Bitmap
+                    // Save Bitmap
                     ExportImage();
                     break;
                 case "btnUndo":
@@ -248,6 +249,7 @@ namespace WPF_Canvas_experience
             e.Handled = true;
         }
 
+        #region Add Figure
         private void NewFigure(object sender, RoutedEventArgs e)
         {
             FrameworkElement feSource = e.Source as FrameworkElement;
@@ -271,7 +273,7 @@ namespace WPF_Canvas_experience
                 Canvas.SetTop(path, 0);
                 drawingArea.Children.Add(path);
 
-                msg = path.Name;                   
+                msg = path.Name;
             }
 
             if (feSource.Name.Equals("menuEllipse"))
@@ -282,47 +284,48 @@ namespace WPF_Canvas_experience
                 ellipse.Height = 60;
                 ellipse.Fill = Brushes.Red;
                 ellipse.Name = string.Format("Ellipse{0}", history.Count);
-                this.RegisterName(ellipse.Name, ellipse);                
+                this.RegisterName(ellipse.Name, ellipse);
 
                 Canvas.SetLeft(ellipse, 50);
                 Canvas.SetTop(ellipse, 50);
                 drawingArea.Children.Add(ellipse);
 
-                msg = ellipse.Name;                   
+                msg = ellipse.Name;
             }
 
             if (feSource.Name.Equals("menuImage"))
             {
-            	Image image = new Image();
+                Image image = new Image();
                 image.Source = ImportImage();
-                
+
                 if (image.Source != null)
                 {
-                	// TODO
-                	// Resize Image
+                    // TODO
+                    // Resize Image
 
-                	image.Name = string.Format("Image{0}", history.Count);
-                	this.RegisterName(image.Name, image);
+                    image.Name = string.Format("Image{0}", history.Count);
+                    this.RegisterName(image.Name, image);
 
                     Canvas.SetLeft(image, 0);
                     Canvas.SetTop(image, 0);
                     drawingArea.Children.Add(image);
 
-                    msg = image.Name;           	
+                    msg = image.Name;
                 }
             }
 
-            Report(string.Format("Add {0}", msg)); 
+            Report(string.Format("Add {0}", msg));
         }
+        #endregion Add Figure
 
         private void CanvasLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
             FrameworkElement feSource = e.Source as FrameworkElement;
 
-            mouseXY = e.GetPosition(this);
-            canvasLeft = Canvas.GetLeft(feSource);
-            canvasTop = Canvas.GetTop(feSource);
+            mousePosition = e.GetPosition(this);
             feSource.CaptureMouse();
+
+            lblInform.Content = string.Format("Capture {0} ...", feSource.Name);
         }
 
         private void CanvasLeftButtonUp(object sender, MouseButtonEventArgs e)
@@ -338,17 +341,19 @@ namespace WPF_Canvas_experience
 
             if (feSource.IsMouseCaptured)
             {
-                Point mouseCurrent = e.GetPosition(this);
-                double left = mouseCurrent.X - canvasLeft;
-                double top = mouseCurrent.Y - canvasTop;
+                if (feSource.Name == "drawingArea")
+                    return;
 
-                feSource.SetValue(Canvas.LeftProperty, canvasLeft + left);
-                feSource.SetValue(Canvas.TopProperty, canvasTop + top);
-                canvasLeft = Canvas.GetLeft(feSource);
-                canvasTop = Canvas.GetTop(feSource);
+                Point mouseCurrentPosition = e.GetPosition(this);
+                double X = Canvas.GetLeft(feSource) + (mouseCurrentPosition.X - mousePosition.X);
+                double Y = Canvas.GetTop(feSource) + (mouseCurrentPosition.Y - mousePosition.Y);
+
+                feSource.SetValue(Canvas.LeftProperty, X);
+                feSource.SetValue(Canvas.TopProperty, Y);
+                mousePosition = mouseCurrentPosition;
 
                 drawingArea.Cursor = Cursors.Hand;
-                lblInform.Content = string.Format("Mouse({0},{1}), moving {2}", mouseCurrent.X, mouseCurrent.Y, feSource.Name);
+                lblInform.Content = string.Format("Mouse Position ({0}), Move {1}", mousePosition.ToString(), feSource.Name);
             }
             else
             {
