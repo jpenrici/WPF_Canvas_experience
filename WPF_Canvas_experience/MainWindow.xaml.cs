@@ -25,6 +25,18 @@ namespace WPF_Canvas_experience
         #region Private Field
         Point mousePosition;
         List<string> history;
+
+        struct fromPosition
+        {
+            public static double X { get; internal set; }
+            public static double Y { get; internal set; }
+        }
+
+        struct toPosition
+        {
+            public static double X { get; internal set; }
+            public static double Y { get; internal set; }
+        }
         #endregion
 
         public MainWindow()
@@ -105,8 +117,9 @@ namespace WPF_Canvas_experience
 
             txtboxConsole.Background = Brushes.Black;
             txtboxConsole.Foreground = Brushes.Green;
+            txtboxConsole.IsReadOnly = true;
             txtboxConsole.MinHeight = 50;
-            txtboxConsole.MinWidth = 530;
+            txtboxConsole.MinWidth = 535;
 
             btnUndo.Click += new RoutedEventHandler(this.CommonClickHandlerFromMenu);
             btnRedo.Click += new RoutedEventHandler(this.CommonClickHandlerFromMenu);
@@ -215,6 +228,7 @@ namespace WPF_Canvas_experience
         private void CommonClickHandlerFromMenu(object sender, RoutedEventArgs e)
         {
             FrameworkElement feSource = e.Source as FrameworkElement;
+
             switch (feSource.Name)
             {
                 case "menuSave":
@@ -253,7 +267,7 @@ namespace WPF_Canvas_experience
         private void NewFigure(object sender, RoutedEventArgs e)
         {
             FrameworkElement feSource = e.Source as FrameworkElement;
-            String msg = "Undefined";
+            var msg = "Undefined";
 
             if (feSource.Name.Equals("menuRectangle"))
             {
@@ -261,12 +275,12 @@ namespace WPF_Canvas_experience
                 var path = new System.Windows.Shapes.Path();
                 RectangleGeometry rectangle = new RectangleGeometry();
 
-                rectangle.Rect = new Rect(50, 50, 50, 50);
+                rectangle.Rect = new Rect(0, 0, 50, 50);
                 path.Fill = Brushes.Red;
                 path.Stroke = Brushes.Black;
                 path.StrokeThickness = 1;
                 path.Data = rectangle;
-                path.Name = string.Format("Rectangle{0}", history.Count);
+                path.Name = string.Format("Rectangle{0:0000}", history.Count);
                 this.RegisterName(path.Name, path);
 
                 Canvas.SetLeft(path, 0);
@@ -283,7 +297,7 @@ namespace WPF_Canvas_experience
                 ellipse.Width = 50;
                 ellipse.Height = 60;
                 ellipse.Fill = Brushes.Red;
-                ellipse.Name = string.Format("Ellipse{0}", history.Count);
+                ellipse.Name = string.Format("Ellipse{0:0000}", history.Count);
                 this.RegisterName(ellipse.Name, ellipse);
 
                 Canvas.SetLeft(ellipse, 50);
@@ -303,7 +317,7 @@ namespace WPF_Canvas_experience
                     // TODO
                     // Resize Image
 
-                    image.Name = string.Format("Image{0}", history.Count);
+                    image.Name = string.Format("Image{0:0000}", history.Count);
                     this.RegisterName(image.Name, image);
 
                     Canvas.SetLeft(image, 0);
@@ -325,13 +339,31 @@ namespace WPF_Canvas_experience
             mousePosition = e.GetPosition(this);
             feSource.CaptureMouse();
 
+            if (!feSource.Name.Equals("drawingArea"))
+            {
+                fromPosition.X = mousePosition.X;
+                fromPosition.Y = mousePosition.Y;
+            }
+
             lblInform.Content = string.Format("Capture {0} ...", feSource.Name);
         }
 
         private void CanvasLeftButtonUp(object sender, MouseButtonEventArgs e)
         {
             FrameworkElement feSource = e.Source as FrameworkElement;
+            Point mouseCurrentPosition = e.GetPosition(this);
+
+            toPosition.X = mouseCurrentPosition.X;
+            toPosition.Y = mouseCurrentPosition.Y;
             feSource.ReleaseMouseCapture();
+
+            if (!feSource.Name.Equals("drawingArea"))
+            {
+                var msg = string.Format("{0}, Move from ({1},{2}) to ({3},{4})",
+                    feSource.Name, fromPosition.X, fromPosition.Y, toPosition.X, toPosition.Y);
+                Report(msg);
+            }
+
             lblInform.Content = "Ready ...";
         }
 
@@ -341,19 +373,27 @@ namespace WPF_Canvas_experience
 
             if (feSource.IsMouseCaptured)
             {
-                if (feSource.Name == "drawingArea")
+                if (feSource.Name.Equals("drawingArea"))
                     return;
 
                 Point mouseCurrentPosition = e.GetPosition(this);
                 double X = Canvas.GetLeft(feSource) + (mouseCurrentPosition.X - mousePosition.X);
                 double Y = Canvas.GetTop(feSource) + (mouseCurrentPosition.Y - mousePosition.Y);
 
-                feSource.SetValue(Canvas.LeftProperty, X);
-                feSource.SetValue(Canvas.TopProperty, Y);
-                mousePosition = mouseCurrentPosition;
+                if (X >= 0 && X <= (drawingArea.Width - feSource.ActualWidth) &&
+                    Y >= 0 && Y <= (drawingArea.Height - feSource.ActualHeight))
+                {
+                    feSource.SetValue(Canvas.LeftProperty, X);
+                    feSource.SetValue(Canvas.TopProperty, Y);
+                    mousePosition = mouseCurrentPosition;
+                    drawingArea.Cursor = Cursors.Hand;
+                }
+                else
+                {
+                    drawingArea.Cursor = Cursors.No;
+                }
 
-                drawingArea.Cursor = Cursors.Hand;
-                lblInform.Content = string.Format("Mouse Position ({0}), Move {1}", mousePosition.ToString(), feSource.Name);
+                lblInform.Content = string.Format("Mouse Position ({0}), Move {1} ...", mousePosition.ToString(), feSource.Name);
             }
             else
             {
