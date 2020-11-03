@@ -24,19 +24,10 @@ namespace WPF_Canvas_experience
     {
         #region Private Field
         Point mousePosition;
-        List<string> history;
-
-        struct fromPosition
-        {
-            public static double X { get; internal set; }
-            public static double Y { get; internal set; }
-        }
-
-        struct toPosition
-        {
-            public static double X { get; internal set; }
-            public static double Y { get; internal set; }
-        }
+        FromPosition fromPosition;
+        ToPosition toPosition;
+        History history;
+        int counter;
         #endregion
 
         public MainWindow()
@@ -54,7 +45,11 @@ namespace WPF_Canvas_experience
             ConfigMenu();
             ConfigCanvas();
             ConfigConsole();
-            history = new List<string> { };
+
+            history = new History();
+            fromPosition = new FromPosition(0, 0);
+            toPosition = new ToPosition(0, 0);
+            counter = 0;
         }
         #endregion
 
@@ -126,19 +121,205 @@ namespace WPF_Canvas_experience
         }
         #endregion Config
 
-        #region Controls
-        private void Report(string action)
+        #region Structures
+        class FromPosition
         {
-            history.Add(action);
-            var msg = string.Format("{0}: {1}\n", history.Count, history.Last());
-            //txtboxConsole.AppendText(msg);
-            txtboxConsole.Text = msg;
+            double x, y;
+
+            public FromPosition(double x, double y)
+            {
+                this.x = x;
+                this.y = y;
+            }
+
+            public double X
+            {
+                get { return x; }
+                set { x = value; }
+            }
+
+            public double Y
+            {
+                get { return y; }
+                set { y = value; }
+            }
+        }
+
+        class ToPosition
+        {
+            double x, y;
+
+            public ToPosition(double x, double y)
+            {
+                this.x = x;
+                this.y = y;
+            }
+
+            public double X
+            {
+                get { return x; }
+                set { x = value; }
+            }
+
+            public double Y
+            {
+                get { return y; }
+                set { y = value; }
+            }
+        }
+
+        class Status
+        {
+            string action;
+            string figureName;
+            ToPosition toPosition;
+            FromPosition fromPosition;
+
+            public Status()
+            {
+                this.action = "Undefined";
+                this.FigureName = "Undefined";
+                fromPosition = new FromPosition(0, 0);
+                toPosition = new ToPosition(0, 0);
+            }
+
+            public Status(string action, string figureName, FromPosition fromPosition, ToPosition toPosition)
+            {
+                this.action = action;
+                this.figureName = figureName;
+                this.fromPosition = fromPosition;
+                this.toPosition = toPosition;
+            }
+
+            public Status(string action, string figureName, double fromPosX, double fromPosY, double toPosX, double toPosY)
+            {
+                this.action = action;
+                this.figureName = figureName;
+                this.fromPosition = new FromPosition(fromPosX, fromPosY);
+                this.toPosition = new ToPosition(toPosX, toPosY);
+            }
+
+            public string Action
+            {
+                get { return action; }
+                set { action = value; }
+            }
+
+            public string FigureName
+            {
+                get { return figureName; }
+                set { figureName = value; }
+            }
+
+            public ToPosition ToPosition
+            {
+                get { return toPosition; }
+                set { toPosition = value; }
+            }
+
+            public FromPosition FromPosition
+            {
+                get { return fromPosition; }
+                set { fromPosition = value; }
+            }
+
+            public override string ToString()
+            {
+                var str = string.Format("{0}; {1}; {2};{3}; {4};{5}", action, figureName,
+                    fromPosition.X, fromPosition.Y, toPosition.X, toPosition.Y);
+                return str;
+            }
+        }
+
+        private class History
+        {
+            List<string> actionsHistory = new List<string>();
+            Stack<Status> stackUndo = new Stack<Status>();
+            Stack<Status> stackRedo = new Stack<Status>();
+
+            public int Count
+            {
+                get
+                {
+                    return actionsHistory.Count;
+                }
+            }
+
+            public void AddActionRecord(Status status)
+            {
+                actionsHistory.Add(status.ToString());
+                stackRedo.Push(status);
+                //stackUndo.Push(reverse(status));
+            }
+
+            private Status reverse(Status status)
+            {
+                switch (status.Action)
+                {
+                    case "ADD":
+                        status.Action = "DEL";
+                        break;
+                    case "DEL":
+                        status.Action = "ADD";
+                        break;
+                    case "MOVE":
+                        var temp = status.FromPosition.X;
+                        status.FromPosition.X = status.ToPosition.X;
+                        status.ToPosition.X = temp;
+                        temp = status.FromPosition.Y;
+                        status.FromPosition.Y = status.ToPosition.Y;
+                        status.ToPosition.Y = temp;
+                        break;
+                }
+                return status;
+            }
+
+            public Status Undo()
+            {
+                // TODO
+                if (stackUndo.Count <= 0)
+                    return null;
+
+                Status status = stackUndo.Pop();
+                actionsHistory.Add("Undo:" + status);
+                //stackRedo.Push(reverse(status));
+
+                return status;
+            }
+
+            public Status Redo()
+            {
+                // TODO
+                return null;
+            }
+
+            public string List()
+            {
+                string txt = "";
+                foreach (var item in actionsHistory)
+                    txt += item + "\n";
+                return txt;
+            }
+        }
+        #endregion Structures
+
+        #region Controls
+        private void Report(Status status)
+        {
+            history.AddActionRecord(status);
+            txtboxConsole.Text = status.ToString();
         }
 
         private void Undo()
         {
             // TODO
-            MessageBox.Show("Undo ...");
+            Status lastStatus = new Status();
+            lastStatus = history.Undo();
+
+            if (lastStatus != null)
+            {
+                MessageBox.Show(lastStatus.ToString());
+            }
         }
 
         private void Redo()
@@ -151,10 +332,7 @@ namespace WPF_Canvas_experience
         private void SaveFile()
         {
             string txtOutput = "History\n";
-            foreach (var line in history)
-            {
-                txtOutput += line + "\n";
-            }
+            txtOutput += history.List();
             Export(txtOutput, "Text Files (*.txt; *.csv) | *.txt; *.csv");
         }
 
@@ -267,7 +445,13 @@ namespace WPF_Canvas_experience
         private void NewFigure(object sender, RoutedEventArgs e)
         {
             FrameworkElement feSource = e.Source as FrameworkElement;
-            var msg = "Undefined";
+            var figureName = "Undefined";
+            counter++;
+
+            int x = 0;
+            int y = 0;
+            int width = 50;
+            int height = 50;
 
             if (feSource.Name.Equals("menuRectangle"))
             {
@@ -275,36 +459,36 @@ namespace WPF_Canvas_experience
                 var path = new System.Windows.Shapes.Path();
                 RectangleGeometry rectangle = new RectangleGeometry();
 
-                rectangle.Rect = new Rect(0, 0, 50, 50);
+                rectangle.Rect = new Rect(x, y, width, height);
                 path.Fill = Brushes.Red;
                 path.Stroke = Brushes.Black;
                 path.StrokeThickness = 1;
                 path.Data = rectangle;
-                path.Name = string.Format("Rectangle{0:0000}", history.Count);
+                path.Name = string.Format("Rectangle{0:0000}", counter);
                 this.RegisterName(path.Name, path);
 
-                Canvas.SetLeft(path, 0);
-                Canvas.SetTop(path, 0);
+                Canvas.SetLeft(path, x);
+                Canvas.SetTop(path, y);
                 drawingArea.Children.Add(path);
 
-                msg = path.Name;
+                figureName = path.Name;
             }
 
             if (feSource.Name.Equals("menuEllipse"))
             {
                 // Shape
                 Ellipse ellipse = new Ellipse();
-                ellipse.Width = 50;
-                ellipse.Height = 60;
+                ellipse.Width = width;
+                ellipse.Height = height;
                 ellipse.Fill = Brushes.Red;
-                ellipse.Name = string.Format("Ellipse{0:0000}", history.Count);
+                ellipse.Name = string.Format("Ellipse{0:0000}", counter);
                 this.RegisterName(ellipse.Name, ellipse);
 
-                Canvas.SetLeft(ellipse, 50);
-                Canvas.SetTop(ellipse, 50);
+                Canvas.SetLeft(ellipse, x);
+                Canvas.SetTop(ellipse, y);
                 drawingArea.Children.Add(ellipse);
 
-                msg = ellipse.Name;
+                figureName = ellipse.Name;
             }
 
             if (feSource.Name.Equals("menuImage"))
@@ -317,18 +501,17 @@ namespace WPF_Canvas_experience
                     // TODO
                     // Resize Image
 
-                    image.Name = string.Format("Image{0:0000}", history.Count);
+                    image.Name = string.Format("Image{0:0000}", counter);
                     this.RegisterName(image.Name, image);
 
-                    Canvas.SetLeft(image, 0);
-                    Canvas.SetTop(image, 0);
+                    Canvas.SetLeft(image, x);
+                    Canvas.SetTop(image, y);
                     drawingArea.Children.Add(image);
 
-                    msg = image.Name;
+                    figureName = image.Name;
                 }
             }
-
-            Report(string.Format("Add {0}", msg));
+            Report(new Status("ADD", figureName, new FromPosition(x, y), new ToPosition(x, y)));
         }
         #endregion Add Figure
 
@@ -359,9 +542,7 @@ namespace WPF_Canvas_experience
 
             if (!feSource.Name.Equals("drawingArea"))
             {
-                var msg = string.Format("{0}, Move from ({1},{2}) to ({3},{4})",
-                    feSource.Name, fromPosition.X, fromPosition.Y, toPosition.X, toPosition.Y);
-                Report(msg);
+                Report(new Status("MOVE", feSource.Name, fromPosition.X, fromPosition.Y, toPosition.X, toPosition.Y));
             }
 
             lblInform.Content = "Ready ...";
