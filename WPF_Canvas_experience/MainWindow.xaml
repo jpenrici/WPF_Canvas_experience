@@ -16,6 +16,7 @@
         <Menu x:Name="menuMain" Grid.Row="0">
             <MenuItem x:Name="menuFile" Header="File">
                 <MenuItem x:Name="menuSave" Header="Save"/>
+                <MenuItem x:Name="menuSaveAs" Header="Save As"/>
                 <MenuItem x:Name="menuExport" Header="Export"/>
                 <MenuItem x:Name="menuQuit" Header="Quit"/>
             </MenuItem>
