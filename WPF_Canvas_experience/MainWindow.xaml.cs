@@ -55,21 +55,34 @@ namespace WPF_Canvas_experience
             WindowState = WindowState.Normal;
             ResizeMode = ResizeMode.NoResize;
             //WindowStyle = WindowStyle.None;
-            Height = 400;
-            Width = 600;
+            Height = 600;
+            Width = 800;
             Title = "WPF Canvas Experience";
             Background = new SolidColorBrush(Color.FromRgb(60, 120, 120));
         }
 
         private void ConfigMenu()
         {
+            menuBackground.Header = "Black";
+
+            ToolTip tooltip;
+            tooltip = new ToolTip { Content = "Save history to text file." };
+            menuSave.ToolTip = tooltip;
+            menuSaveAs.ToolTip = tooltip;
+            menuExport.ToolTip = new ToolTip { Content = "Save Canvas Image." };
+            menuClear.ToolTip = new ToolTip { Content = "Remove figures." };
+            menuBackgroundClear.ToolTip = new ToolTip { Content = "Default background." };
+
             menuSave.Click += new RoutedEventHandler(this.CommonClickHandlerFromMenu);
             menuSaveAs.Click += new RoutedEventHandler(this.CommonClickHandlerFromMenu);
             menuExport.Click += new RoutedEventHandler(this.CommonClickHandlerFromMenu);
             menuQuit.Click += new RoutedEventHandler(this.CommonClickHandlerFromMenu);
+            menuClear.Click += new RoutedEventHandler(this.CommonClickHandlerFromMenu);
             menuUndo.Click += new RoutedEventHandler(this.CommonClickHandlerFromMenu);
             menuRedo.Click += new RoutedEventHandler(this.CommonClickHandlerFromMenu);
             menuBackground.Click += new RoutedEventHandler(this.CommonClickHandlerFromMenu);
+            menuBackgroundImage.Click += new RoutedEventHandler(this.CommonClickHandlerFromMenu);
+            menuBackgroundClear.Click += new RoutedEventHandler(this.CommonClickHandlerFromMenu);
             menuAbout.Click += new RoutedEventHandler(this.CommonClickHandlerFromMenu);
 
             string[] figures = {
@@ -94,8 +107,8 @@ namespace WPF_Canvas_experience
             drawingArea.Background = Brushes.White;
             drawingArea.Cursor = Cursors.Arrow;
             drawingArea.Margin = new Thickness(2, 2, 2, 2);
-            drawingArea.Height = 250;
-            drawingArea.Width = 580;
+            drawingArea.Height = 450;
+            drawingArea.Width = 780;
 
             drawingArea.PreviewMouseLeftButtonDown += new MouseButtonEventHandler(CanvasLeftButtonDown);
             drawingArea.PreviewMouseLeftButtonUp += new MouseButtonEventHandler(CanvasLeftButtonUp);
@@ -112,7 +125,7 @@ namespace WPF_Canvas_experience
             txtboxConsole.Foreground = Brushes.Green;
             txtboxConsole.IsReadOnly = true;
             txtboxConsole.Height = 50;
-            txtboxConsole.Width = 535;
+            txtboxConsole.Width = 735;
             txtboxConsole.Margin = new Thickness(5, 0, 5, 0);
 
             btnUndo.Click += new RoutedEventHandler(this.CommonClickHandlerFromMenu);
@@ -427,8 +440,8 @@ namespace WPF_Canvas_experience
 
                 if (bmp != null)
                 {
-                    double pxW = drawingArea.ActualWidth / 3;
-                    double pxH = drawingArea.ActualHeight / 3;
+                    double pxW = drawingArea.ActualWidth / 4;
+                    double pxH = drawingArea.ActualHeight / 4;
                     double bmpW = bmp.PixelWidth;
                     double bmpH = bmp.PixelHeight;
                     if (bmpW < pxW && bmpH < pxH)
@@ -563,6 +576,11 @@ namespace WPF_Canvas_experience
                 case "menuExport":
                     ExportImageCanvas();
                     break;
+                case "menuClear":
+                    txtboxConsole.Text = "Clear ...\n";
+                    drawingArea.Children.Clear();
+                    history = new History();
+                    break;
                 case "btnUndo":
                 case "menuUndo":
                     Undo();
@@ -572,8 +590,26 @@ namespace WPF_Canvas_experience
                     Redo();
                     break;
                 case "menuBackground":
-                    drawingArea.Background = drawingArea.Background == Brushes.White ? Brushes.Black : Brushes.White;
-                    menuBackground.Header = string.Format("Background {0}", drawingArea.Background);
+                    if (drawingArea.Background == Brushes.White)
+                    {
+                        drawingArea.Background = Brushes.Black;
+                        menuBackground.Header = "White";
+                    }
+                    else
+                    {
+                        drawingArea.Background = Brushes.White;
+                        menuBackground.Header = "Black";
+                    }
+                    break;
+                case "menuBackgroundImage":
+                    ImageBrush bkg = new ImageBrush();
+                    bkg.ImageSource = ImportImage();
+                    if (bkg != null)
+                        drawingArea.Background = bkg;
+                    break;
+                case "menuBackgroundClear":
+                    drawingArea.Background = Brushes.White;
+                    menuBackground.Header = "Black";
                     break;
                 case "menuAbout":
                     var msg = "Canvas in WPF C#.\nSimple experience!";

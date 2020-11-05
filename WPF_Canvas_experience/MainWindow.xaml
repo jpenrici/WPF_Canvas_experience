@@ -21,15 +21,23 @@
                 <MenuItem x:Name="menuQuit" Header="Quit"/>
             </MenuItem>
             <MenuItem x:Name="menuEdit" Header="Edit">
+                <MenuItem x:Name="menuClear" Header="Clear"/>
+                <Separator/>
                 <MenuItem x:Name="menuUndo" Header="Undo"/>
                 <MenuItem x:Name="menuRedo" Header="Redo"/>
-                <MenuItem x:Name="menuBackground" Header="Background"/>
+                <Separator/>
+                <MenuItem x:Name="menuCanvasBackground" Header="Background">
+                    <MenuItem x:Name="menuBackground" Header="Color"/>
+                    <MenuItem x:Name="menuBackgroundImage" Header="Image"/>
+                    <Separator/>
+                    <MenuItem x:Name="menuBackgroundClear" Header="Clear"/>
+                </MenuItem>
             </MenuItem>
             <MenuItem x:Name="menuAdd" Header="Add"/>
             <MenuItem x:Name="menuAbout" Header="About"/>
         </Menu>
         <!-- Drawing Area -->
-            <Canvas x:Name="drawingArea" Grid.Row="1"/>
+        <Canvas x:Name="drawingArea" Grid.Row="1"/>
         <!-- Console -->
         <StackPanel x:Name="stackInform" Grid.Row="2" Orientation="Vertical">
             <Label x:Name="lblInform"/>
