@@ -2,17 +2,11 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
 using System.Windows.Shapes;
 
 namespace WPF_Canvas_experience
@@ -23,6 +17,8 @@ namespace WPF_Canvas_experience
     public partial class MainWindow : Window
     {
         #region Private Field
+        const string TXTFILTERS = "Text Files (*.txt; *.csv) | *.txt; *.csv";
+        const string IMGFILTERS = "Image Files (*.jpg; *.jpeg; *.gif; *.bmp; *.png) | *.jpg; *.jpeg; *.gif; *.bmp; *.png";
         Point mousePosition;
         Point fromPosition;
         Point toPosition;
@@ -115,6 +111,7 @@ namespace WPF_Canvas_experience
             txtboxConsole.IsReadOnly = true;
             txtboxConsole.Height = 50;
             txtboxConsole.Width = 535;
+            txtboxConsole.Margin = new Thickness(5, 0, 5, 0);
 
             btnUndo.Click += new RoutedEventHandler(this.CommonClickHandlerFromMenu);
             btnRedo.Click += new RoutedEventHandler(this.CommonClickHandlerFromMenu);
@@ -122,21 +119,35 @@ namespace WPF_Canvas_experience
         #endregion Config
 
         #region Structures
+        enum RecordType
+        {
+            None,
+            Undo,
+            Redo,
+            Normal,
+            Undefined
+        }
+
         class Status
         {
             string action;
             string figure;
             Point origin;
             Point destiny;
+            RecordType recordType;
 
-            public Status(Status status) : this(status.Action, status.Figure, status.Origin, status.Destiny) { }
+            public Status(Status status) : this(status.Action, status.Figure, status.Origin, status.Destiny, status.recordType) { }
 
-            public Status(string action, string figure, Point origin, Point destiny)
+            public Status(string action, string figure, Point origin, Point destiny, RecordType typeAction)
             {
                 this.action = action;
                 this.figure = figure;
                 this.origin = origin;
                 this.destiny = destiny;
+
+                if (typeAction < RecordType.None && typeAction > RecordType.Undefined)
+                    typeAction = RecordType.None;
+                this.recordType = typeAction;
             }
 
             public string Action
@@ -163,9 +174,15 @@ namespace WPF_Canvas_experience
                 set { destiny = value; }
             }
 
+            public RecordType RecordType
+            {
+                get { return recordType; }
+                set { recordType = value; }
+            }
+
             public override string ToString()
             {
-                return string.Format("{0} {1} {2} {3}", action, figure, origin, destiny);
+                return string.Format("{0} {1} {2} {3} [{4}]", action, figure, origin, destiny, Enum.GetName(typeof(RecordType), recordType));
             }
         }
 
@@ -197,11 +214,11 @@ namespace WPF_Canvas_experience
                 get { return actions.Count; }
             }
 
-            public void ActionRecord(Status status, bool IsUndo)
+            public void ActionRecord(Status status)
             {
                 actions.Add(status.ToString());
 
-                if (!IsUndo)
+                if (!status.RecordType.Equals(RecordType.Undo))
                     stackUndo.Push(reverse(status));
             }
 
@@ -211,6 +228,7 @@ namespace WPF_Canvas_experience
                 {
                     if (stackUndo.Count < 1)
                         return null;
+
                     Status last = stackUndo.Pop();
                     stackRedo.Push(reverse(last));
                     return last;
@@ -223,6 +241,7 @@ namespace WPF_Canvas_experience
                 {
                     if (stackRedo.Count < 1)
                         return null;
+
                     Status last = stackRedo.Pop();
                     return last;
                 }
@@ -231,6 +250,7 @@ namespace WPF_Canvas_experience
             private Status reverse(Status status)
             {
                 Status copy = new Status(status);
+
                 switch (copy.Action)
                 {
                     case "ADD":
@@ -245,6 +265,7 @@ namespace WPF_Canvas_experience
                         copy.Origin = temp;
                         break;
                 }
+
                 return copy;
             }
 
@@ -259,12 +280,26 @@ namespace WPF_Canvas_experience
         #endregion Structures
 
         #region Controls
-        private void Report(Status status, bool isUndo)
+        private void Report(Status status)
         {
             if (status != null)
             {
-                history.ActionRecord(status, isUndo);
-                txtboxConsole.AppendText(status.ToString() + "\n");
+                history.ActionRecord(status);
+
+                string output = string.Format("{0}: {1} {2} {3} {4} ", history.Count, status.Action, status.Figure, status.Origin, status.Destiny);
+
+                switch (status.RecordType)
+                {
+                    case RecordType.Undo:
+                        output += "[Undo]";
+                        break;
+                    case RecordType.Redo:
+                        output += "[Redo]";
+                        break;
+                    case RecordType.Normal:
+                        break;
+                }
+                txtboxConsole.AppendText(output + "\n");
                 txtboxConsole.ScrollToEnd();
             }
         }
@@ -272,15 +307,33 @@ namespace WPF_Canvas_experience
         private void Undo()
         {
             Status last = history.Undo;
-            Change(last);
-            Report(last, true);
+
+            if (last != null)
+            {
+                last.RecordType = RecordType.Undo;
+                Change(last);
+                Report(last);
+            }
+            else
+            {
+                txtboxConsole.AppendText("Nothing to do.\n");
+            }
         }
 
         private void Redo()
         {
             Status last = history.Redo;
-            Change(last);
-            Report(last, false);
+
+            if (last != null)
+            {
+                last.RecordType = RecordType.Redo;
+                Change(last);
+                Report(last);
+            }
+            else
+            {
+                txtboxConsole.AppendText("Nothing to do.\n");
+            }
         }
 
         private void Change(Status status)
@@ -300,7 +353,6 @@ namespace WPF_Canvas_experience
                         figure.Visibility = Visibility.Hidden;
                         break;
                     case "MOVE":
-                        // TODO
                         figure.SetValue(Canvas.LeftProperty, status.Destiny.X);
                         figure.SetValue(Canvas.TopProperty, status.Destiny.Y);
                         break;
@@ -316,7 +368,13 @@ namespace WPF_Canvas_experience
             int width = 50;
             int height = 50;
             int id = counter++;
-            string name = "Undefined";
+            string name = "";
+
+            Random rnd = new Random();
+            byte R = (byte)rnd.Next(1, 255);
+            byte G = (byte)rnd.Next(1, 255);
+            byte B = (byte)rnd.Next(1, 255);
+            Brush brush = new SolidColorBrush(Color.FromRgb(R, G, B));
 
             if (figure.Equals("Rectangle"))
             {
@@ -325,11 +383,11 @@ namespace WPF_Canvas_experience
                 RectangleGeometry rectangle = new RectangleGeometry();
 
                 rectangle.Rect = new Rect(x, y, width, height);
-                path.Fill = Brushes.Red;
+                path.Fill = brush;
                 path.Stroke = Brushes.Black;
                 path.StrokeThickness = 1;
                 path.Data = rectangle;
-                path.Name = string.Format("Rectangle{0:0000}", id);
+                path.Name = string.Format("Rectangle_ID{0:0000}", id);
                 this.RegisterName(path.Name, path);
 
                 Canvas.SetLeft(path, x);
@@ -345,8 +403,10 @@ namespace WPF_Canvas_experience
                 Ellipse ellipse = new Ellipse();
                 ellipse.Width = width;
                 ellipse.Height = height;
-                ellipse.Fill = Brushes.Red;
-                ellipse.Name = string.Format("Ellipse{0:0000}", id);
+                ellipse.Stroke = Brushes.Black;
+                ellipse.StrokeThickness = 0.5;
+                ellipse.Fill = brush;
+                ellipse.Name = string.Format("Ellipse_ID{0:0000}", id);
                 this.RegisterName(ellipse.Name, ellipse);
 
                 Canvas.SetLeft(ellipse, x);
@@ -359,14 +419,20 @@ namespace WPF_Canvas_experience
             if (figure.Equals("Image"))
             {
                 Image image = new Image();
-                image.Source = ImportImage();
+                BitmapImage bmp = ImportImage();
 
-                if (image.Source != null)
+                if (bmp != null)
                 {
-                    // TODO
-                    // Resize Image
+                    double pxW = drawingArea.ActualWidth / 3;
+                    double pxH = drawingArea.ActualHeight / 3;
+                    double bmpW = bmp.PixelWidth;
+                    double bmpH = bmp.PixelHeight;
+                    if (bmpW < pxW && bmpH < pxH)
+                        image.Source = bmp;
+                    else
+                        image.Source = new TransformedBitmap(bmp, new ScaleTransform(pxW / bmpW, pxH / bmpH));
 
-                    image.Name = string.Format("Image{0:0000}", id);
+                    image.Name = string.Format("Image_ID{0:0000}", id);
                     this.RegisterName(image.Name, image);
 
                     Canvas.SetLeft(image, x);
@@ -376,17 +442,19 @@ namespace WPF_Canvas_experience
                     name = image.Name;
                 }
             }
-            Report(new Status("ADD", name, new Point(x, y), new Point(x, y)), false);
+
+            if (!name.Equals(""))
+                Report(new Status("ADD", name, new Point(x, y), new Point(x, y), RecordType.Normal));
         }
 
         #region Open and Save Files
-        private void Export(string filename, object value, string filter)
+        private void Export(string filename, object obj, string filter)
         {
-            if (value.Equals(null))
+            if (obj.Equals(null))
                 return;
 
-            Type t = value.GetType();
-            if (!t.Equals(typeof(string)) && !t.Equals(typeof(BitmapImage)))
+            Type t = obj.GetType();
+            if (!t.Equals(typeof(string)) && !t.Equals(typeof(BitmapImage)) && !t.Equals(typeof(RenderTargetBitmap)))
                 return;
 
             try
@@ -397,34 +465,48 @@ namespace WPF_Canvas_experience
                     saveDlg.RestoreDirectory = true;
                     saveDlg.Filter = filter;
 
-                    if (saveDlg.ShowDialog().Equals(true))
-                    {
-                        filename = saveDlg.FileName;
-                    }
-                    else
-                    {
-                        MessageBox.Show("Action canceled!");
+                    if (saveDlg.ShowDialog().Equals(false))
                         return;
-                    }
+
+                    filename = saveDlg.FileName;
                 }
 
                 FileStream fs = new FileStream(filename, FileMode.Create);
+                string extension = System.IO.Path.GetExtension(filename).ToLower();
 
-                if (t.Equals(typeof(string)))
+                if (extension.Equals(".txt") || extension.Equals(".csv"))
                 {
-                    // Output Text
                     StreamWriter writer = new StreamWriter(fs);
-                    writer.Write(value);
+                    writer.Write(obj);
                     writer.Close();
-
                     history.Filename = filename;
-
                     lblInform.Content = string.Format("Saved: {0}", filename);
+                    return;
                 }
+
+                BitmapEncoder encoder;
+                if (extension.Equals(".gif"))
+                    encoder = new GifBitmapEncoder();
+                else if (extension.Equals(".png"))
+                    encoder = new PngBitmapEncoder();
+                else if (extension.Equals(".jpg") || extension.Equals(".jpeg"))
+                    encoder = new JpegBitmapEncoder();
+                else
+                    return;
+
+                if (t.Equals(typeof(BitmapImage)))
+                    encoder.Frames.Add(BitmapFrame.Create((BitmapImage)obj));
+                else
+                    encoder.Frames.Add(BitmapFrame.Create((RenderTargetBitmap)obj));
+
+                encoder.Save(fs);
+                fs.Close();
+
+                lblInform.Content = string.Format("Saved: {0}", filename);
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Erro: " + ex.Message, "Erro", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show("Error: " + ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -434,12 +516,10 @@ namespace WPF_Canvas_experience
             try
             {
                 OpenFileDialog openDlg = new OpenFileDialog();
-                openDlg.Filter = "Image Files (*.jpg; *.jpeg; *.gif; *.bmp; *.png) | *.jpg; *.jpeg; *.gif; *.bmp; *.png";
+                openDlg.Filter = IMGFILTERS;
 
                 if (openDlg.ShowDialog().Equals(true))
-                {
                     bitmap = new BitmapImage(new Uri(openDlg.FileName));
-                }
             }
             catch (Exception ex)
             {
@@ -448,11 +528,17 @@ namespace WPF_Canvas_experience
             return bitmap;
         }
 
-        private void ExportImage()
+        private void ExportImageCanvas()
         {
-            // TODO
-            MessageBox.Show("Export Canvas");
-            //Export("", canvas, "Image Files (*.jpg; *.bmp; *.png) | *.jpg; *.bmp; *.png");
+            int pixelHeight = (int)drawingArea.ActualHeight;
+            int pixelWidth = (int)drawingArea.ActualWidth;
+            int dpi = 75;
+
+            RenderTargetBitmap target;
+            target = new RenderTargetBitmap(pixelWidth, pixelHeight, dpi, dpi, PixelFormats.Default);
+            target.Render(drawingArea);
+
+            Export("", target, IMGFILTERS);
         }
         #endregion Open and Save Files
         #endregion Controls
@@ -465,14 +551,13 @@ namespace WPF_Canvas_experience
             switch (feSource.Name)
             {
                 case "menuSave":
-                    Export(history.Filename, history.List(), "Text Files (*.txt; *.csv) | *.txt; *.csv");
+                    Export(history.Filename, history.List(), TXTFILTERS);
                     break;
                 case "menuSaveAs":
-                    Export("", history.List(), "Text Files (*.txt; *.csv) | *.txt; *.csv");
+                    Export("", history.List(), TXTFILTERS);
                     break;
                 case "menuExport":
-                    // Save Bitmap
-                    ExportImage();
+                    ExportImageCanvas();
                     break;
                 case "btnUndo":
                 case "menuUndo":
@@ -539,7 +624,7 @@ namespace WPF_Canvas_experience
 
             if (!feSource.Name.Equals("drawingArea"))
             {
-                Report(new Status("MOVE", feSource.Name, fromPosition, toPosition), false);
+                Report(new Status("MOVE", feSource.Name, fromPosition, toPosition, RecordType.Normal));
             }
 
             lblInform.Content = "Ready ...";
