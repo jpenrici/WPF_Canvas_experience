@@ -1,6 +1,7 @@
 ﻿using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
@@ -63,7 +64,7 @@ namespace WPF_Canvas_experience
 
         private void ConfigMenu()
         {
-            menuBackground.Header = "Black";
+            menuBackground.Header = "Black";    // Canvas background
 
             ToolTip tooltip;
             tooltip = new ToolTip { Content = "Save history to text file." };
@@ -73,30 +74,30 @@ namespace WPF_Canvas_experience
             menuClear.ToolTip = new ToolTip { Content = "Remove figures." };
             menuBackgroundClear.ToolTip = new ToolTip { Content = "Default background." };
 
-            menuSave.Click += new RoutedEventHandler(this.CommonClickHandlerFromMenu);
-            menuSaveAs.Click += new RoutedEventHandler(this.CommonClickHandlerFromMenu);
-            menuExport.Click += new RoutedEventHandler(this.CommonClickHandlerFromMenu);
-            menuQuit.Click += new RoutedEventHandler(this.CommonClickHandlerFromMenu);
-            menuClear.Click += new RoutedEventHandler(this.CommonClickHandlerFromMenu);
-            menuUndo.Click += new RoutedEventHandler(this.CommonClickHandlerFromMenu);
-            menuRedo.Click += new RoutedEventHandler(this.CommonClickHandlerFromMenu);
-            menuBackground.Click += new RoutedEventHandler(this.CommonClickHandlerFromMenu);
-            menuBackgroundImage.Click += new RoutedEventHandler(this.CommonClickHandlerFromMenu);
-            menuBackgroundClear.Click += new RoutedEventHandler(this.CommonClickHandlerFromMenu);
-            menuAbout.Click += new RoutedEventHandler(this.CommonClickHandlerFromMenu);
+            menuSave.Click += new RoutedEventHandler(CommonClickHandlerFromMenu);
+            menuSaveAs.Click += new RoutedEventHandler(CommonClickHandlerFromMenu);
+            menuExport.Click += new RoutedEventHandler(CommonClickHandlerFromMenu);
+            menuQuit.Click += new RoutedEventHandler(CommonClickHandlerFromMenu);
+            menuClear.Click += new RoutedEventHandler(CommonClickHandlerFromMenu);
+            menuUndo.Click += new RoutedEventHandler(CommonClickHandlerFromMenu);
+            menuRedo.Click += new RoutedEventHandler(CommonClickHandlerFromMenu);
+            menuBackground.Click += new RoutedEventHandler(CommonClickHandlerFromMenu);
+            menuBackgroundImage.Click += new RoutedEventHandler(CommonClickHandlerFromMenu);
+            menuBackgroundClear.Click += new RoutedEventHandler(CommonClickHandlerFromMenu);
+            menuAbout.Click += new RoutedEventHandler(CommonClickHandlerFromMenu);
 
             string[] figures = {
                 "Rectangle",
                 "Ellipse",
-                "Image",
+                "Image"
             };
 
             foreach (var item in figures)
             {
-                var newItem = new MenuItem();
+                MenuItem newItem = new MenuItem();
                 newItem.Header = item;
-                newItem.Name = "menu" + item;
-                newItem.Click += new RoutedEventHandler(this.NewFigure);
+                newItem.Name = "menu" + item.Replace(" ", "");
+                newItem.Click += new RoutedEventHandler(CommonClickHandlerFromMenu);
                 menuAdd.Items.Add(newItem);
             }
         }
@@ -109,6 +110,23 @@ namespace WPF_Canvas_experience
             drawingArea.Margin = new Thickness(2, 2, 2, 2);
             drawingArea.Height = 450;
             drawingArea.Width = 780;
+
+            ContextMenu contextMenu = new ContextMenu();
+            drawingArea.ContextMenu = contextMenu;
+
+            string[] popup = {
+                "Background White",
+                "Background Black"
+            };
+
+            foreach (var item in popup)
+            {
+                MenuItem newItem = new MenuItem();
+                newItem.Header = item;
+                newItem.Name = "popup" + item.Replace(" ", "");
+                newItem.Click += new RoutedEventHandler(CommonClickHandlerFromMenu);
+                contextMenu.Items.Add(newItem);
+            }
 
             drawingArea.PreviewMouseLeftButtonDown += new MouseButtonEventHandler(CanvasLeftButtonDown);
             drawingArea.PreviewMouseLeftButtonUp += new MouseButtonEventHandler(CanvasLeftButtonUp);
@@ -128,8 +146,8 @@ namespace WPF_Canvas_experience
             txtboxConsole.Width = 735;
             txtboxConsole.Margin = new Thickness(5, 0, 5, 0);
 
-            btnUndo.Click += new RoutedEventHandler(this.CommonClickHandlerFromMenu);
-            btnRedo.Click += new RoutedEventHandler(this.CommonClickHandlerFromMenu);
+            btnUndo.Click += new RoutedEventHandler(CommonClickHandlerFromMenu);
+            btnRedo.Click += new RoutedEventHandler(CommonClickHandlerFromMenu);
         }
         #endregion Config
 
@@ -203,14 +221,14 @@ namespace WPF_Canvas_experience
 
         private class History
         {
-            List<string> actions;
+            List<Status> actions;
             Stack<Status> stackUndo;
             Stack<Status> stackRedo;
             string filename;
 
             public History()
             {
-                actions = new List<string>();
+                actions = new List<Status>();
                 stackUndo = new Stack<Status>();
                 stackRedo = new Stack<Status>();
 
@@ -231,7 +249,7 @@ namespace WPF_Canvas_experience
 
             public void ActionRecord(Status status)
             {
-                actions.Add(status.ToString());
+                actions.Add(status);
 
                 if (!status.RecordType.Equals(RecordType.Undo))
                     stackUndo.Push(reverse(status));
@@ -269,9 +287,9 @@ namespace WPF_Canvas_experience
                 switch (copy.Action)
                 {
                     case "ADD":
-                        copy.Action = "DEL";
+                        copy.Action = "HIDDEN";
                         break;
-                    case "DEL":
+                    case "HIDDEN":
                         copy.Action = "ADD";
                         break;
                     case "MOVE":
@@ -279,9 +297,31 @@ namespace WPF_Canvas_experience
                         copy.Destiny = copy.Origin;
                         copy.Origin = temp;
                         break;
+                    case "SCALEUP":
+                        copy.Action = "SCALEDOWN";
+                        break;
+                    case "SCALEDOWN":
+                        copy.Action = "SCALEUP";
+                        break;
+                    case "LROTATE":
+                        copy.Action = "RROTATE";
+                        break;
+                    case "RROTATE":
+                        copy.Action = "LROTATE";
+                        break;
                 }
 
                 return copy;
+            }
+
+            public Status Last
+            {
+                get
+                {
+                    if (actions.Count < 1)
+                        return null;
+                    return actions[actions.Count - 1];
+                }
             }
 
             public string List()
@@ -319,6 +359,7 @@ namespace WPF_Canvas_experience
             }
         }
 
+        #region Undo/Redo
         private void Undo()
         {
             Status last = history.Undo;
@@ -352,6 +393,7 @@ namespace WPF_Canvas_experience
                 txtboxConsole.ScrollToEnd();
             }
         }
+        #endregion Undo/Redo
 
         private void Change(Status status)
         {
@@ -366,12 +408,18 @@ namespace WPF_Canvas_experience
                     case "ADD":
                         figure.Visibility = Visibility.Visible;
                         break;
-                    case "DEL":
+                    case "HIDDEN":
                         figure.Visibility = Visibility.Hidden;
                         break;
                     case "MOVE":
                         figure.SetValue(Canvas.LeftProperty, status.Destiny.X);
                         figure.SetValue(Canvas.TopProperty, status.Destiny.Y);
+                        break;
+                    case "SCALEUP":
+                    case "SCALEDOWN":
+                    case "RROTATE":
+                    case "LROTATE":
+                        Debug.WriteLine(status.Action);
                         break;
                 }
             }
@@ -393,6 +441,22 @@ namespace WPF_Canvas_experience
             byte B = (byte)rnd.Next(1, 255);
             Brush brush = new SolidColorBrush(Color.FromRgb(R, G, B));
 
+            ContextMenu contextMenu = new ContextMenu();
+
+            string[] popup = {
+                "Scale UP", "Scale DOWN",
+                "Left Rotate", "Right Rotate"
+            };
+
+            foreach (var item in popup)
+            {
+                MenuItem newItem = new MenuItem();
+                newItem.Header = item;
+                newItem.Name = "popup" + item.Replace(" ", "");
+                newItem.Click += new RoutedEventHandler(this.CommonClickHandlerFromMenu);
+                contextMenu.Items.Add(newItem);
+            }
+
             if (figure.Equals("Rectangle"))
             {
                 // Geomtry
@@ -405,6 +469,7 @@ namespace WPF_Canvas_experience
                 path.StrokeThickness = 1;
                 path.Data = rectangle;
                 path.Name = string.Format("Rectangle_ID{0:0000}", id);
+                path.ContextMenu = contextMenu;
                 this.RegisterName(path.Name, path);
 
                 Canvas.SetLeft(path, x);
@@ -424,6 +489,7 @@ namespace WPF_Canvas_experience
                 ellipse.StrokeThickness = 0.5;
                 ellipse.Fill = brush;
                 ellipse.Name = string.Format("Ellipse_ID{0:0000}", id);
+                ellipse.ContextMenu = contextMenu;
                 this.RegisterName(ellipse.Name, ellipse);
 
                 Canvas.SetLeft(ellipse, x);
@@ -450,6 +516,7 @@ namespace WPF_Canvas_experience
                         image.Source = new TransformedBitmap(bmp, new ScaleTransform(pxW / bmpW, pxH / bmpH));
 
                     image.Name = string.Format("Image_ID{0:0000}", id);
+                    image.ContextMenu = contextMenu;
                     this.RegisterName(image.Name, image);
 
                     Canvas.SetLeft(image, x);
@@ -462,6 +529,114 @@ namespace WPF_Canvas_experience
 
             if (!name.Equals(""))
                 Report(new Status("ADD", name, new Point(x, y), new Point(x, y), RecordType.Normal));
+        }
+
+        private void Transform(string action)
+        {
+            Status last = history.Last;
+            if (last != null)
+            {
+                last.Action = action;
+                Change(last);
+                Report(last);
+            }
+        }
+
+        private void MenuControl(string menuName)
+        {
+            switch (menuName)
+            {
+                // File
+                case "menuSave":
+                    Export(history.Filename, history.List(), TXTFILTERS);
+                    break;
+                case "menuSaveAs":
+                    Export("", history.List(), TXTFILTERS);
+                    break;
+                case "menuExport":
+                    ExportImageCanvas();
+                    break;
+                case "menuClear":
+                    txtboxConsole.Text = "Clear ...\n";
+                    drawingArea.Children.Clear();
+                    history = new History();
+                    break;
+                case "menuQuit":
+                    MessageBox.Show("Goodbye!");
+                    Close();
+                    break;
+
+                // Edit
+                case "btnUndo":
+                case "menuUndo":
+                    Undo();
+                    break;
+                case "btnRedo":
+                case "menuRedo":
+                    Redo();
+                    break;
+                case "menuBackground":
+                    if (drawingArea.Background == Brushes.White)
+                    {
+                        drawingArea.Background = Brushes.Black;
+                        menuBackground.Header = "White";
+                    }
+                    else
+                    {
+                        drawingArea.Background = Brushes.White;
+                        menuBackground.Header = "Black";
+                    }
+                    break;
+                case "menuBackgroundImage":
+                    ImageBrush bkg = new ImageBrush();
+                    bkg.ImageSource = ImportImage();
+                    if (bkg != null)
+                        drawingArea.Background = bkg;
+                    break;
+                case "menuBackgroundClear":
+                    drawingArea.Background = Brushes.White;
+                    menuBackground.Header = "Black";
+                    break;
+
+                // Add
+                case "menuRectangle":
+                    AddFigure("Rectangle");
+                    break;
+                case "menuEllipse":
+                    AddFigure("Ellipse");
+                    break;
+                case "menuImage":
+                    AddFigure("Image");
+                    break;
+
+                // About
+                case "menuAbout":
+                    var msg = "Canvas in WPF C#.\nSimple experience!";
+                    MessageBox.Show(msg);
+                    break;
+
+                // Context
+                case "popupScaleUp":
+                    Transform("SCALEUP");
+                    break;
+                case "popupScaleDOWN":
+                    Transform("SCALEDOWN");
+                    break;
+                case "popupLeftRotate":
+                    Transform("LROTATE");
+                    break;
+                case "popupRightRotate":
+                    Transform("RROTATE");
+                    break;
+                case "popupBackgroundWhite":
+                    drawingArea.Background = Brushes.White;
+                    menuBackground.Header = "Black";
+                    break;
+                case "popupBackgroundBlack":
+                    drawingArea.Background = Brushes.Black;
+                    menuBackground.Header = "White";
+                    break;
+            }
         }
 
         #region Open and Save Files
@@ -564,81 +739,8 @@ namespace WPF_Canvas_experience
         private void CommonClickHandlerFromMenu(object sender, RoutedEventArgs e)
         {
             FrameworkElement feSource = e.Source as FrameworkElement;
-
-            switch (feSource.Name)
-            {
-                case "menuSave":
-                    Export(history.Filename, history.List(), TXTFILTERS);
-                    break;
-                case "menuSaveAs":
-                    Export("", history.List(), TXTFILTERS);
-                    break;
-                case "menuExport":
-                    ExportImageCanvas();
-                    break;
-                case "menuClear":
-                    txtboxConsole.Text = "Clear ...\n";
-                    drawingArea.Children.Clear();
-                    history = new History();
-                    break;
-                case "btnUndo":
-                case "menuUndo":
-                    Undo();
-                    break;
-                case "btnRedo":
-                case "menuRedo":
-                    Redo();
-                    break;
-                case "menuBackground":
-                    if (drawingArea.Background == Brushes.White)
-                    {
-                        drawingArea.Background = Brushes.Black;
-                        menuBackground.Header = "White";
-                    }
-                    else
-                    {
-                        drawingArea.Background = Brushes.White;
-                        menuBackground.Header = "Black";
-                    }
-                    break;
-                case "menuBackgroundImage":
-                    ImageBrush bkg = new ImageBrush();
-                    bkg.ImageSource = ImportImage();
-                    if (bkg != null)
-                        drawingArea.Background = bkg;
-                    break;
-                case "menuBackgroundClear":
-                    drawingArea.Background = Brushes.White;
-                    menuBackground.Header = "Black";
-                    break;
-                case "menuAbout":
-                    var msg = "Canvas in WPF C#.\nSimple experience!";
-                    MessageBox.Show(msg);
-                    break;
-                case "menuQuit":
-                    MessageBox.Show("Goodbye!");
-                    Close();
-                    break;
-            }
+            MenuControl(feSource.Name);
             e.Handled = true;
-        }
-
-        private void NewFigure(object sender, RoutedEventArgs e)
-        {
-            FrameworkElement feSource = e.Source as FrameworkElement;
-
-            switch (feSource.Name)
-            {
-                case "menuRectangle":
-                    AddFigure("Rectangle");
-                    break;
-                case "menuEllipse":
-                    AddFigure("Ellipse");
-                    break;
-                case "menuImage":
-                    AddFigure("Image");
-                    break;
-            }
         }
 
         private void CanvasLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -666,10 +768,8 @@ namespace WPF_Canvas_experience
             feSource.ReleaseMouseCapture();
 
             if (!feSource.Name.Equals("drawingArea"))
-            {
                 if (!fromPosition.Equals(toPosition))
                     Report(new Status("MOVE", feSource.Name, fromPosition, toPosition, RecordType.Normal));
-            }
 
             lblInform.Content = "Ready ...";
         }
