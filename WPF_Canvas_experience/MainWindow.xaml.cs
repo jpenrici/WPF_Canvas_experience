@@ -167,16 +167,28 @@ namespace WPF_Canvas_experience
             string figure;
             Point origin;
             Point destiny;
+            double scale;
+            double rotate;
             RecordType recordType;
 
-            public Status(Status status) : this(status.Action, status.Figure, status.Origin, status.Destiny, status.recordType) { }
+            public Status(Status status) : this(status.Action, status.Figure,
+                status.Origin, status.Destiny, status.scale, status.rotate, status.recordType) { }
 
-            public Status(string action, string figure, Point origin, Point destiny, RecordType typeAction)
+            public Status(string action, string figure, Point origin, Point destiny,
+                double scale, double rotate, RecordType typeAction)
             {
                 this.action = action;
                 this.figure = figure;
                 this.origin = origin;
                 this.destiny = destiny;
+
+                if (scale < 1)
+                    scale = 1;
+                this.scale = scale;
+
+                if (rotate < 0 && rotate > 360)
+                    rotate = 0;
+                this.rotate = rotate;
 
                 if (typeAction < RecordType.None && typeAction > RecordType.Undefined)
                     typeAction = RecordType.None;
@@ -207,6 +219,18 @@ namespace WPF_Canvas_experience
                 set { destiny = value; }
             }
 
+            public double Scale
+            {
+                get { return scale; }
+                set { scale = value; }
+            }
+
+            public double Rotate
+            {
+                get { return rotate; }
+                set { rotate = value; }
+            }
+
             public RecordType RecordType
             {
                 get { return recordType; }
@@ -215,7 +239,8 @@ namespace WPF_Canvas_experience
 
             public override string ToString()
             {
-                return string.Format("{0} {1} {2} {3} [{4}]", action, figure, origin, destiny, Enum.GetName(typeof(RecordType), recordType));
+                return string.Format("{0} {1} {2} {3} {4} {5} [{6}]", action, figure, origin, destiny,
+                    scale, rotate, Enum.GetName(typeof(RecordType), recordType));
             }
         }
 
@@ -341,7 +366,8 @@ namespace WPF_Canvas_experience
             {
                 history.ActionRecord(status);
 
-                string output = string.Format("{0}: {1} {2} {3} {4} ", history.Count, status.Action, status.Figure, status.Origin, status.Destiny);
+                string output = string.Format("{0}: {1} {2} {3} {4} ", history.Count, status.Action,
+                    status.Figure, status.Origin, status.Destiny);
 
                 switch (status.RecordType)
                 {
@@ -416,12 +442,25 @@ namespace WPF_Canvas_experience
                         figure.SetValue(Canvas.TopProperty, status.Destiny.Y);
                         break;
                     case "SCALEUP":
+                        status.Scale += 0.2;
+                        break;
                     case "SCALEDOWN":
+                        status.Scale -= 0.2;
+                        break;
                     case "RROTATE":
+                        status.Rotate += 5;
+                        break;
                     case "LROTATE":
-                        Debug.WriteLine(status.Action);
+                        status.Rotate -= 5;
                         break;
                 }
+                TransformGroup transformGroup = new TransformGroup();
+                transformGroup.Children.Add(new ScaleTransform(status.Scale, status.Scale));
+                transformGroup.Children.Add(new RotateTransform(status.Rotate, status.Origin.X, status.Origin.Y));
+                figure.RenderTransform = transformGroup;
+
+                Debug.WriteLine(status);
+                Report(status);
             }
         }
 
@@ -528,7 +567,7 @@ namespace WPF_Canvas_experience
             }
 
             if (!name.Equals(""))
-                Report(new Status("ADD", name, new Point(x, y), new Point(x, y), RecordType.Normal));
+                Report(new Status("ADD", name, new Point(x, y), new Point(x, y), 1, 0, RecordType.Normal));
         }
 
         private void Transform(string action)
@@ -537,8 +576,8 @@ namespace WPF_Canvas_experience
             if (last != null)
             {
                 last.Action = action;
+                last.RecordType = RecordType.Normal;
                 Change(last);
-                Report(last);
             }
         }
 
@@ -556,17 +595,13 @@ namespace WPF_Canvas_experience
                 case "menuExport":
                     ExportImageCanvas();
                     break;
+
+                // Edit
                 case "menuClear":
-                    txtboxConsole.Text = "Clear ...\n";
+                    txtboxConsole.Text = "Figures removed!\n";
                     drawingArea.Children.Clear();
                     history = new History();
                     break;
-                case "menuQuit":
-                    MessageBox.Show("Goodbye!");
-                    Close();
-                    break;
-
-                // Edit
                 case "btnUndo":
                 case "menuUndo":
                     Undo();
@@ -587,15 +622,20 @@ namespace WPF_Canvas_experience
                         menuBackground.Header = "Black";
                     }
                     break;
+                case "menuBackgroundClear":
+                case "popupBackgroundWhite":
+                    drawingArea.Background = Brushes.White;
+                    menuBackground.Header = "Black";
+                    break;
+                case "popupBackgroundBlack":
+                    drawingArea.Background = Brushes.Black;
+                    menuBackground.Header = "White";
+                    break;
                 case "menuBackgroundImage":
                     ImageBrush bkg = new ImageBrush();
                     bkg.ImageSource = ImportImage();
                     if (bkg != null)
                         drawingArea.Background = bkg;
-                    break;
-                case "menuBackgroundClear":
-                    drawingArea.Background = Brushes.White;
-                    menuBackground.Header = "Black";
                     break;
 
                 // Add
@@ -609,14 +649,8 @@ namespace WPF_Canvas_experience
                     AddFigure("Image");
                     break;
 
-                // About
-                case "menuAbout":
-                    var msg = "Canvas in WPF C#.\nSimple experience!";
-                    MessageBox.Show(msg);
-                    break;
-
                 // Context
-                case "popupScaleUp":
+                case "popupScaleUP":
                     Transform("SCALEUP");
                     break;
                 case "popupScaleDOWN":
@@ -628,13 +662,17 @@ namespace WPF_Canvas_experience
                 case "popupRightRotate":
                     Transform("RROTATE");
                     break;
-                case "popupBackgroundWhite":
-                    drawingArea.Background = Brushes.White;
-                    menuBackground.Header = "Black";
+
+                // About
+                case "menuAbout":
+                    var msg = "Canvas in WPF C#.\nSimple experience!";
+                    MessageBox.Show(msg);
                     break;
-                case "popupBackgroundBlack":
-                    drawingArea.Background = Brushes.Black;
-                    menuBackground.Header = "White";
+
+                // Exit
+                case "menuQuit":
+                    MessageBox.Show("Goodbye!");
+                    Close();
                     break;
             }
         }
@@ -672,7 +710,7 @@ namespace WPF_Canvas_experience
                     writer.Write(obj);
                     writer.Close();
                     history.Filename = filename;
-                    lblInform.Content = string.Format("Saved: {0}", filename);
+                    lblInform.Content = string.Format("Saved console history: {0}", filename);
                     return;
                 }
 
@@ -694,7 +732,7 @@ namespace WPF_Canvas_experience
                 encoder.Save(fs);
                 fs.Close();
 
-                lblInform.Content = string.Format("Saved: {0}", filename);
+                lblInform.Content = string.Format("Exported image: {0}", filename);
             }
             catch (Exception ex)
             {
@@ -769,7 +807,7 @@ namespace WPF_Canvas_experience
 
             if (!feSource.Name.Equals("drawingArea"))
                 if (!fromPosition.Equals(toPosition))
-                    Report(new Status("MOVE", feSource.Name, fromPosition, toPosition, RecordType.Normal));
+                    Report(new Status("MOVE", feSource.Name, fromPosition, toPosition, 1, 0, RecordType.Normal));
 
             lblInform.Content = "Ready ...";
         }
