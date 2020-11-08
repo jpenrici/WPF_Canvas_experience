@@ -29,8 +29,6 @@
                 <MenuItem x:Name="menuCanvasBackground" Header="Background">
                     <MenuItem x:Name="menuBackground" Header="Color"/>
                     <MenuItem x:Name="menuBackgroundImage" Header="Image"/>
-                    <Separator/>
-                    <MenuItem x:Name="menuBackgroundClear" Header="Clear"/>
                 </MenuItem>
             </MenuItem>
             <MenuItem x:Name="menuAdd" Header="Add"/>
