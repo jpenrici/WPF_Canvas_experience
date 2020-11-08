@@ -17,9 +17,11 @@ namespace WPF_Canvas_experience
     /// </summary>
     public partial class MainWindow : Window
     {
-        #region Private Field
+        #region Fields
         const string TXTFILTERS = "Text Files (*.txt; *.csv) | *.txt; *.csv";
         const string IMGFILTERS = "Image Files (*.jpg; *.jpeg; *.gif; *.bmp; *.png) | *.jpg; *.jpeg; *.gif; *.bmp; *.png";
+        Dictionary<string, Status> figures;
+        string figureSelected;
         Point mousePosition;
         Point fromPosition;
         Point toPosition;
@@ -46,6 +48,7 @@ namespace WPF_Canvas_experience
             // Init
             counter = 0;
             history = new History();
+            figures = new Dictionary<string, Status>();
         }
         #endregion
 
@@ -108,8 +111,8 @@ namespace WPF_Canvas_experience
             drawingArea.Background = Brushes.White;
             drawingArea.Cursor = Cursors.Arrow;
             drawingArea.Margin = new Thickness(2, 2, 2, 2);
-            drawingArea.Height = 450;
-            drawingArea.Width = 780;
+            drawingArea.Height = Height - 150;
+            drawingArea.Width = Width - 20;
 
             ContextMenu contextMenu = new ContextMenu();
             drawingArea.ContextMenu = contextMenu;
@@ -130,6 +133,7 @@ namespace WPF_Canvas_experience
 
             drawingArea.PreviewMouseLeftButtonDown += new MouseButtonEventHandler(CanvasLeftButtonDown);
             drawingArea.PreviewMouseLeftButtonUp += new MouseButtonEventHandler(CanvasLeftButtonUp);
+            drawingArea.PreviewMouseRightButtonDown += new MouseButtonEventHandler(CanvasRightButtonUp);
             drawingArea.PreviewMouseMove += new MouseEventHandler(CanvasMouseMove);
         }
 
@@ -171,8 +175,9 @@ namespace WPF_Canvas_experience
             double rotate;
             RecordType recordType;
 
-            public Status(Status status) : this(status.Action, status.Figure,
-                status.Origin, status.Destiny, status.scale, status.rotate, status.recordType) { }
+            public Status(Status status) : this(status.Action, status.Figure, status.Origin, status.Destiny,
+                status.scale, status.rotate, status.recordType)
+            { }
 
             public Status(string action, string figure, Point origin, Point destiny,
                 double scale, double rotate, RecordType typeAction)
@@ -272,6 +277,16 @@ namespace WPF_Canvas_experience
                 get { return actions.Count; }
             }
 
+            public int CountUndo
+            {
+                get { return stackUndo.Count; }
+            }
+
+            public int CountRedo
+            {
+                get { return stackRedo.Count; }
+            }
+
             public void ActionRecord(Status status)
             {
                 actions.Add(status);
@@ -312,9 +327,9 @@ namespace WPF_Canvas_experience
                 switch (copy.Action)
                 {
                     case "ADD":
-                        copy.Action = "HIDDEN";
+                        copy.Action = "DEL";
                         break;
-                    case "HIDDEN":
+                    case "DEL":
                         copy.Action = "ADD";
                         break;
                     case "MOVE":
@@ -364,8 +379,17 @@ namespace WPF_Canvas_experience
         {
             if (status != null)
             {
-                history.ActionRecord(status);
+                try
+                {
+                    figures.Add(status.Figure, status);
+                }
+                catch (ArgumentException)
+                {
+                    figures[status.Figure] = status;
+                    Debug.WriteLine(status);
+                }
 
+                history.ActionRecord(status);
                 string output = string.Format("{0}: {1} {2} {3} {4} ", history.Count, status.Action,
                     status.Figure, status.Origin, status.Destiny);
 
@@ -385,14 +409,19 @@ namespace WPF_Canvas_experience
             }
         }
 
-        #region Undo/Redo
-        private void Undo()
+        private void CurrentHistory()
         {
-            Status last = history.Undo;
+            var str = string.Format("Figures: {0}, History: {1}, Undo: {2}, Redo: {3}\n",
+                figures.Count, history.Count, history.CountUndo, history.CountRedo);
+            txtboxConsole.AppendText(str);
+        }
 
+        #region Undo/Redo
+        private void Edit(Status last, RecordType recordType)
+        {
             if (last != null)
             {
-                last.RecordType = RecordType.Undo;
+                last.RecordType = recordType;
                 Change(last);
                 Report(last);
             }
@@ -401,26 +430,30 @@ namespace WPF_Canvas_experience
                 txtboxConsole.AppendText("Nothing to do.\n");
                 txtboxConsole.ScrollToEnd();
             }
+
+            CurrentHistory();
+        }
+
+        private void Undo()
+        {
+            Edit(history.Undo, RecordType.Undo);
         }
 
         private void Redo()
         {
-            Status last = history.Redo;
-
-            if (last != null)
-            {
-                last.RecordType = RecordType.Redo;
-                Change(last);
-                Report(last);
-            }
-            else
-            {
-                txtboxConsole.AppendText("Nothing to do.\n");
-                txtboxConsole.ScrollToEnd();
-            }
+            Edit(history.Redo, RecordType.Redo);
         }
         #endregion Undo/Redo
 
+        private Status CurrentStatus(string figureName)
+        {
+            Status currentStatus = null;
+            if (!figures.TryGetValue(figureName, out currentStatus))
+                return null;
+            return currentStatus;
+        }
+
+        #region Edit
         private void Change(Status status)
         {
             if (status == null)
@@ -434,7 +467,7 @@ namespace WPF_Canvas_experience
                     case "ADD":
                         figure.Visibility = Visibility.Visible;
                         break;
-                    case "HIDDEN":
+                    case "DEL":
                         figure.Visibility = Visibility.Hidden;
                         break;
                     case "MOVE":
@@ -464,7 +497,18 @@ namespace WPF_Canvas_experience
             }
         }
 
-        private void AddFigure(string figure)
+        private void Transform(string action)
+        {
+            Status currentStatus = CurrentStatus(figureSelected);
+            if (currentStatus == null)
+                return;
+            currentStatus.Action = action;
+            Change(currentStatus);
+        }
+        #endregion
+
+        #region Add Figure
+        private void Add(string figure)
         {
             // default
             int x = 0;
@@ -496,6 +540,7 @@ namespace WPF_Canvas_experience
                 contextMenu.Items.Add(newItem);
             }
 
+            #region Add Rectangle
             if (figure.Equals("Rectangle"))
             {
                 // Geomtry
@@ -517,7 +562,9 @@ namespace WPF_Canvas_experience
 
                 name = path.Name;
             }
+            #endregion
 
+            #region Add Ellipse
             if (figure.Equals("Ellipse"))
             {
                 // Shape
@@ -537,7 +584,9 @@ namespace WPF_Canvas_experience
 
                 name = ellipse.Name;
             }
+            #endregion
 
+            #region Add Image
             if (figure.Equals("Image"))
             {
                 Image image = new Image();
@@ -565,22 +614,14 @@ namespace WPF_Canvas_experience
                     name = image.Name;
                 }
             }
+            #endregion
 
             if (!name.Equals(""))
                 Report(new Status("ADD", name, new Point(x, y), new Point(x, y), 1, 0, RecordType.Normal));
         }
+        #endregion Add Figure
 
-        private void Transform(string action)
-        {
-            Status last = history.Last;
-            if (last != null)
-            {
-                last.Action = action;
-                last.RecordType = RecordType.Normal;
-                Change(last);
-            }
-        }
-
+        #region Menu Control
         private void MenuControl(string menuName)
         {
             switch (menuName)
@@ -640,13 +681,13 @@ namespace WPF_Canvas_experience
 
                 // Add
                 case "menuRectangle":
-                    AddFigure("Rectangle");
+                    Add("Rectangle");
                     break;
                 case "menuEllipse":
-                    AddFigure("Ellipse");
+                    Add("Ellipse");
                     break;
                 case "menuImage":
-                    AddFigure("Image");
+                    Add("Image");
                     break;
 
                 // Context
@@ -676,8 +717,9 @@ namespace WPF_Canvas_experience
                     break;
             }
         }
+        #endregion
 
-        #region Open and Save Files
+        #region Open/Save
         private void Export(string filename, object obj, string filter)
         {
             if (obj.Equals(null))
@@ -770,7 +812,7 @@ namespace WPF_Canvas_experience
 
             Export("", target, IMGFILTERS);
         }
-        #endregion Open and Save Files
+        #endregion Open/Save
         #endregion Controls
 
         #region Events  
@@ -807,9 +849,20 @@ namespace WPF_Canvas_experience
 
             if (!feSource.Name.Equals("drawingArea"))
                 if (!fromPosition.Equals(toPosition))
-                    Report(new Status("MOVE", feSource.Name, fromPosition, toPosition, 1, 0, RecordType.Normal));
+                {
+                    Status currentStatus = CurrentStatus(feSource.Name);
+                    if (currentStatus != null)
+                        Report(new Status("MOVE", currentStatus.Figure, fromPosition, toPosition, currentStatus.Scale,
+                            currentStatus.Rotate, RecordType.Normal));
+                }
 
             lblInform.Content = "Ready ...";
+        }
+
+        private void CanvasRightButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            FrameworkElement feSource = e.Source as FrameworkElement;
+            figureSelected = feSource.Name;
         }
 
         private void CanvasMouseMove(object sender, MouseEventArgs e)
