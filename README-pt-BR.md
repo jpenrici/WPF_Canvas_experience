@@ -15,10 +15,10 @@ Observação: Na operação DEL não ocorre a deleção do objeto, apenas a ocul
 - <b>Background</b>: Altera o fundo do Canvas, com Cor sólida ou com adição de Imagem.</br>
 
 ### Menu Add
-- Adiciona Shapes e Imagens.
-<b>Rectângulo</b>: Onde é testado o comportamento de Geometry.
-<b>Ellipse</b>: Onde é testado o comportamento de Shape.
-<b>Imagem</b>: Onde é possível inserir imagem nos formatos JPG, BMP e PNG.
+- Adiciona Formas e Imagens.
+- <b>Rectângulo</b>: Onde é testado o comportamento de Geometry.
+- <b>Ellipse</b>: Onde é testado o comportamento de Shape.
+- <b>Imagem</b>: Onde é possível inserir imagem nos formatos JPG, BMP e PNG.
 
 ### Menu About
 - Simples mensagem.
