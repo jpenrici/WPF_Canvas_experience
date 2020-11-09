@@ -381,11 +381,11 @@ namespace WPF_Canvas_experience
                 catch (ArgumentException)
                 {
                     figures[status.Figure] = status;
-                    Debug.WriteLine(status);
+                    //Debug.WriteLine(status);
                 }
 
                 history.ActionRecord(status);
-                string output = string.Format("{0}: {1} {2} {3} {4} ", history.Count, status.Action,
+                string output = string.Format("{0}: {1} - {2}, ({3}) => ({4}) ", history.Count, status.Action,
                     status.Figure, status.Origin, status.Destiny);
 
                 switch (status.RecordType)
@@ -480,9 +480,12 @@ namespace WPF_Canvas_experience
                         status.Rotate -= 5;
                         break;
                 }
+                double centerX = status.Origin.X + figure.ActualWidth * status.Scale / 2;
+                double centerY = status.Origin.Y + figure.ActualHeight * status.Scale / 2;
+
                 TransformGroup transformGroup = new TransformGroup();
                 transformGroup.Children.Add(new ScaleTransform(status.Scale, status.Scale));
-                transformGroup.Children.Add(new RotateTransform(status.Rotate, status.Origin.X, status.Origin.Y));
+                transformGroup.Children.Add(new RotateTransform(status.Rotate, centerX, centerY));
                 figure.RenderTransform = transformGroup;
 
                 Report(status);
@@ -644,15 +647,18 @@ namespace WPF_Canvas_experience
                     Redo();
                     break;
                 case "menuBackground":
-                    if (drawingArea.Background == Brushes.White)
-                    {
-                        drawingArea.Background = Brushes.Black;
-                        menuBackground.Header = "White";
-                    }
-                    else
+                    if (menuBackground.Header.ToString() == "White")
                     {
                         drawingArea.Background = Brushes.White;
                         menuBackground.Header = "Black";
+                    }
+                    else
+                    {
+                        if (menuBackground.Header.ToString() == "Black")
+                        {
+                            drawingArea.Background = Brushes.Black;
+                            menuBackground.Header = "White";
+                        }
                     }
                     break;
                 case "popupBackgroundWhite":
