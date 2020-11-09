@@ -6,8 +6,7 @@ Aplicativo construido em WPF C# para manipulação de Formas e Imagens.
 
 ### Menu File
 - <b>Save e Save As</b>: Exporta em arquivo <b>.TXT</b> ou <b>.CSV</b> o histórico de inserções e movimento de objetos dentro do Canvas.
-- <b>Export</b>: Exporta a imagem do Canvas.
-</br>
+- <b>Export</b>: Exporta a imagem do Canvas.</br>
 
 ### Menu Edit
 - <b>Clear</b>: Limpa o Canvas, eliminando todos os objetos adicionados, preservando o background.
@@ -28,8 +27,8 @@ Observação: Na operação DEL não ocorre a deleção do objeto, apenas a ocul
 Abaixo da área de desenho (Canvas) é exibido um TextBox com as movimentações executadas.
 
 
-##Referência
-[WPF](https://docs.microsoft.com/pt-br/visualstudio/designers/getting-started-with-wpf?view=vs-2019)
+## Referência
+[WPF](https://docs.microsoft.com/pt-br/visualstudio/designers/getting-started-with-wpf?view=vs-2019) : docs.microsoft.com/pt-br/visualstudio
 
 ## Display
 ![Display](https://github.com/jpenrici/WPF_Canvas_experience/blob/main/Display/Display.gif)
